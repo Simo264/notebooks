@@ -175,24 +175,73 @@ The anisotropic GGX ellipsoid is harder to sample directly. But a linear transfo
 
 == The Torrance–Sparrow Model
 How conductors handle rough microstructures via a BRDF model due to Torrance and Sparrow. To describe the directional reflectance characteristics of a specularly reflecting rough surface, Torrance and Sparrow (1967) developed a bidirectional reflectance distribution function (BRDF) model based on geometrical optics.
-For a ray leaving the surface in direction:
-1. Sample a visible microfacet normal $omega_m$ from the VNDF $D_omega_o (omega_m)$
-2. Reflect $omega_o$ about $omega_m$ to obtain the incident direction $omega_i$
-3. Weight the result by Fresnel and by $G_1(omega_i)$ which accounts for shadowing from the light’s direction.
 
-So the sampled microfacet is not chosen arbitrarily: it is chosen because it is statistically likely to be visible from the viewer and able to reflect light toward the viewer.
-
-The reflection formula is:
+#question(title: "What problem is Torrance–Sparrow trying to solve?")[
+Imagine a perfectly smooth mirror. When light hits it, the reflection direction is completely deterministic:
 $ omega_r = -omega_o + 2(omega_m dot omega_o)omega_m $
-This is ordinary mirror reflection, but about the microfacet normal $omega_m$ rather than the smooth macrosurface normal.
+There is only one possible reflection direction. Now imagine that instead of a perfectly smooth mirror, we have a rough metallic surface.
+#figure(image("figures/diagram_roughness.png"))
+]
 
-The inverse mapping is:
+The model assumes that the rough surface is made of many tiny, individually smooth mirrors:
+- each microfacet reflects like a perfect mirror, each has its own normal $omega_m$
+- the distribution $D(omega_m)$ describes how many facets have each orientation
+- Fresnel determines how much light each facet reflects
+- masking/shadowing $G$ determines how much of each facet is actually visible.
+#figure(image("figures/diagram_micro_vs_macro.png", width: 50%))
+
+#question(title: "How can we mathematically describe the reflection produced by a collection of microscopic mirror-like surfaces with different orientations?")[By constructing a BRDF using geometrical optics and statistical distributions of microfacet orientations.]
+
+The fundamental assumption: #underline[every microfacet is a tiny mirror]. This is the most important assumption of the model. Let's consider a single microfacet. We have:
+- an incoming light direction $omega_i$
+- an outgoing light direction $omega_o$
+- a microfacet normal $omega_m$
+
+#idea(title: "The half-vector idea")[
+For the microfacet to reflect light from the incoming direction towards the viewer, it must satisfy the law of specular reflection. The microfacet normal must bisect the angle between the incoming and outgoing directions.
 $ omega_m = "normalize"(omega_i + omega_o) $
-This direction is called the *halfway vector*. It is exactly halfway between the incoming and outgoing directions.
+This is the *halfway vector*.
 
-#figure(image("figures/Half_Direction_Transform.png"))
+#figure(image("figures/diagram_macrosurface.png", width: 50%))
+]
+
+Because once we know the incoming and outgoing directions, #underline[we know exactly which microfacet orientation could produce that reflection. We don't have to consider every possible microfacet normal.]
+
+#question(title: "But how many microfacets have that orientation?")[
+This is where the NDF comes in:
+$ D(omega_m) $
+
+It tells you how many tiny mirrors are oriented to support a given reflection.
+]
+
+However a microfacet might be hidden behind another microfacet. We therefore need to account for masking from the viewing direction:
+$ G_1 (omega_m) $
+As before, a microfacet might be visible from the viewer but shadowed from the light. We must account for both masking and shadowing:
+$ G(omega_i, omega_o) = G_1(omega_i)G_1(omega_o) $
+
+Finally, even if the microfacet receives light and reflects it towards us, the amount of reflected light depends on the material. This is described by the Fresnel term:
+$ F(omega_i, omega_m) $
+
+#memo(title: "The Torrance–Sparrow BRDF")[
+$ f_r(p,omega_o,omega_i) = (D(omega_m)F(omega_i, omega_m)G(omega_i, omega_o))/(4 |cos theta_i| |cos theta_o|) $
+]
+
+
+------------------------------------------------------------------
+
+This figure shows microfacet normals, incident directions, and outgoing directions satisfy an interesting geometric relationship. We hold the outgoing direction $omega_o$ fixed and visualize the set of microfacets (shaded in blue) that will yield a valid reflection from an arc/cone of directions around the incident direction (shaded in green). 
+#figure(image("figures/Half_Direction_Transform.png"), caption: [(a), the set of admissible microfacets is simply a smaller arc. The 3D case is more complex and involves spherical conic sections. In (b), with the center of the $omega_i$ cone aligned with $omega_o$ the admissible microfacets form a spherical circle. (c) With a $140°$ angle between $omega_o$ and $omega_i$ direction, the microfacets form a spherical ellipse. (d) A spherical hyperbola is the result with a $170°$ angle.])
 
 In the two-dimensional setting, the half-direction mapping simplifies to:
 $ theta_m = (theta_o + theta_i)/2 $
 
-A slight perturbation of the incident angle $theta_i$ (shaded green region) $theta_o$
+A slight perturbation of the incident angle $theta_i$ (shaded green region) while keeping $theta_o$ fixed requires a corresponding change to the microfacet angle $theta_m$ (shaded blue region) to ensure that the law of specular reflection continues to hold.
+
+The 3D case appears challenging, working with infinitesimal sets leads to a simple analytic expression that can be derived by expressing differential solid angles around $omega_m$ and $omega_i$  using spherical coordinates:
+$ upright((d omega_m)/(d omega_i) = (sin theta_m d theta_m d phi_m)/(sin theta_i d theta_i d phi_i)) $
+
+The expression can be simplified by noting that the law of specular reflection implies $theta_i = 2 theta_m$ and $phi_i = phi_m$:
+$ upright((d omega_m)/(d omega_i) = 1/(4(omega_i dot omega_m)) = 1/(4(omega_o dot omega_m)) ) $
+
+
+
