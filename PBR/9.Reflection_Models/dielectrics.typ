@@ -51,3 +51,36 @@ This does not create or destroy energy. It accounts for the fact that the same p
 ]
 
 Total internal reflection occurs when light tries to leave a higher-IOR medium at too large an angle, such as glass to air. In that case, Snell’s law has no valid refracted solution. The Fresnel transmittance $T$ becomes zero at and beyond the critical angle. Therefore, the sampler should choose reflection with probability 1 and transmission with probability 0.
+
+== Rough Dielectric BSDF
+We will now extend the microfacet to the case of rough dielectrics. So it models rough glass, water, plastic, and similar translucent materials. The key difference from a rough conductor is that each microfacet uses Snell’s law, not just mirror reflection.
+
+A rough dielectric has many microscopic interfaces with different normals. Therefore, reflection becomes a blurry lobe around the mirror direction, and transmission becomes a blurry lobe around the refracted direction. The rough dielectric BSDF describes both blurred lobes statistically
+
+
+
+
+
+
+
+We first start with the density evaluation:
+- Evaluate sampling PDF of rough dielectric BSDF
+- compute generalized half vector $omega_m$
+- discard backfacing microfactes
+- determine Fresnel reflactance
+- compute probabilities density for sampling reflection and transmission
+
+We now turn to the generalized half-direction vector whose discussion requires a closer look at Snell’s law:
+$ eta_o sin theta_o = eta_i sin theta_i #h(1cm) phi_o = phi_i + pi $
+
+Since the refraction takes place at the level of the microgeometry, all of these angles are to be understood within a coordinate frame aligned with the microfacet normal $omega_m$. A generalized half-direction vector:
+$ omega_m = (eta_i omega_i + eta_o omega_o)/(| eta_i omega_i + eta_o omega_o |) = (eta omega_i + eta_o omega_o)/(|eta omega_i + eta_o omega_o|) $
+
+$omega_m$ always points toward the denser medium, whereas pbrt uses the convention that micro and macro normal are consistently oriented, $omega_m dot n > 0$. In practice, we therefore compute the following modified half-direction vector, where $n = (0,0,1)$ in local coordinates:
+$ omega_m = "sign"(omega_m dot n > 0)omega_m $
+
+Next, microfacets that are backfacing with respect to either the incident or outgoing direction do not contribute and must be discarded.
+Given $omega_m$ we can evaluate the Fresnel reflection and transmission terms using the specialized dielectric evaluation of the Fresnel equations.
+
+We now have the values necessary to compute the PDF for $omega_i$ which depends on whether it reflects or transmits at the surface.
+$ p(omega_i) = D_omega_o (omega_m) = (d omega_m)/(d omega_i) = (D_omega_o (omega_m)|omega_o dot omega_m|)/((omega_i dot omega_m) + ((omega_o dot omega_m)/eta))^2 $

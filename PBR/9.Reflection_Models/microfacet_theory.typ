@@ -226,22 +226,18 @@ $ F(omega_i, omega_m) $
 $ f_r(p,omega_o,omega_i) = (D(omega_m)F(omega_i, omega_m)G(omega_i, omega_o))/(4 |cos theta_i| |cos theta_o|) $
 ]
 
+#memo(title: "Torrance–Sparrow PDF")[
+$ p(omega_i) = D_omega_o (omega_m) (d omega_m)/(d omega_i) = (D_omega_o (omega_m)) / (4(omega_o dot omega_m)) $
 
-------------------------------------------------------------------
+The single-sample Monte Carlo estimator:
+$ L_o (p, omega_o) &= integral_(H^2(n)) f_r (p, omega_o, omega_i) L_i (p, omega_i) |cos theta_i| d omega_i \ 
+&approx (f_r (p, omega_o, omega_i) L_i (p, omega_i) |cos theta_i|) / p(omega_i)
+$
+]
 
-This figure shows microfacet normals, incident directions, and outgoing directions satisfy an interesting geometric relationship. We hold the outgoing direction $omega_o$ fixed and visualize the set of microfacets (shaded in blue) that will yield a valid reflection from an arc/cone of directions around the incident direction (shaded in green). 
-#figure(image("figures/Half_Direction_Transform.png"), caption: [(a), the set of admissible microfacets is simply a smaller arc. The 3D case is more complex and involves spherical conic sections. In (b), with the center of the $omega_i$ cone aligned with $omega_o$ the admissible microfacets form a spherical circle. (c) With a $140°$ angle between $omega_o$ and $omega_i$ direction, the microfacets form a spherical ellipse. (d) A spherical hyperbola is the result with a $170°$ angle.])
+The sampling procedure follows the sequence of steps outlined at the beginning of this subsection. We must to find a microfacet orientation and reflects the outgoing direction about the microfacet’s normal to find $omega_i$ before evaluating the BRDF and density function.
 
-In the two-dimensional setting, the half-direction mapping simplifies to:
-$ theta_m = (theta_o + theta_i)/2 $
+A curious situation arises when the sampled microfacet normal leads to a computed direction that lies below the macroscopic surface. In a real microstructure, this would mean that light travels deeper into a crevice, to be scattered a second or third time.
+For now, We only simulate a single interaction and thus mark such samples as invalid. This reveals one of the main flaws of the presented model: objects with significant roughness may appear too dark due to this lack of multiple scattering.
 
-A slight perturbation of the incident angle $theta_i$ (shaded green region) while keeping $theta_o$ fixed requires a corresponding change to the microfacet angle $theta_m$ (shaded blue region) to ensure that the law of specular reflection continues to hold.
-
-The 3D case appears challenging, working with infinitesimal sets leads to a simple analytic expression that can be derived by expressing differential solid angles around $omega_m$ and $omega_i$  using spherical coordinates:
-$ upright((d omega_m)/(d omega_i) = (sin theta_m d theta_m d phi_m)/(sin theta_i d theta_i d phi_i)) $
-
-The expression can be simplified by noting that the law of specular reflection implies $theta_i = 2 theta_m$ and $phi_i = phi_m$:
-$ upright((d omega_m)/(d omega_i) = 1/(4(omega_i dot omega_m)) = 1/(4(omega_o dot omega_m)) ) $
-
-
-
+Visible normal sampling is still a relatively new development: for several decades, microfacet models relied on sampling $omega_i$ directly proportional to the microfacet distribution, which tends to produce noisier renderings.
