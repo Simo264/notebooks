@@ -102,10 +102,8 @@ $ theta_r = theta_i #h(1cm) phi_r = phi_i + pi $
 == The Snell's Law
 At a specular interface, incident light with direction $(theta_i, phi_i)$ about the surface normal refracts into a single transmitted direction $(theta_r, phi_r)$ located on the opposite side of the interface. 
 
-#info[
 Imagine light traveling from air into glass. At the boundary, it changes direction. Snell’s law gives the new direction:
 $ eta_i sin theta_i = eta_t sin theta_t $
-]
 
 Here, $theta_i$ is the angle between the incoming ray and the surface normal; $theta_t$ is the angle between the transmitted ray and the normal on the other side; $eta_i$ and $eta_t$ are the IORs of the two materials.
 

@@ -54,7 +54,7 @@ In contrast, an *anisotropic* microfacet distribution also depends on the azimut
 Many functional representations of microfacet distributions have been proposed over the years. One of the most widely used distribution is *Trowbridge-Reitz (GGX)*. 
 
 Its anisotropic form is:
-$ upright( D(omega_m) = 1 / (pi alpha_x alpha_y cos^4 theta_m (1 + tan^2 theta_m ( (cos^2 phi_m)/(alpha_x^2) + (sin^2 phi_m)/(alpha_y^2) )))^2 ) $
+$ upright( D(omega_m) = 1 / (pi alpha_x alpha_y cos^4 theta_m (1 + tan^2 theta_m ((cos^2 phi_m)/(alpha_x^2) + (sin^2 phi_m)/(alpha_y^2)))^2 ) ) $
 
 - $alpha_x$ is roughness along one tangent direction
 - $alpha_y$ is roughness along the perpendicular tangent direction
@@ -81,7 +81,7 @@ $ upright(integral_(H^2(n)) D(omega_m) G_1(omega, omega_m) max(0,omega dot omega
 
 Knowing the distribution of normals does not tell you exactly how the facets are arranged in space. Different arrangements can have the same $D$ but different visibility, so $D$ alone cannot uniquely determine the general masking function.
 
-#idea(title: "Smith' approximation")[
+#idea(title: "Smith approximation")[
 If the height and normals of different points on the surface are assumed to be statistically independent, the masking factor for front-facing microfacets no longer depends on their individual normal $omega_m$. We can therefore use the simpler function $G_1(omega)$  and move it outside the integral.
 This does not mean orientation becomes irrelevant: a facet must still face the viewing direction, which is enforced by $max(0,omega dot omega_m)$. The simplification concerns the statistical occlusion factor.
 $ upright(G_1(omega) = integral_(H^2(n)) D(omega_m) max(0,omega dot omega_m) d omega_m = cos theta) $
@@ -94,8 +94,7 @@ $ upright(G_1(omega) &= 1/(1 + Lambda(omega))) \
 Lambda(omega) &= (sqrt(1 + alpha^2 tan^2 theta) - 1)/2
 $
 
-here $theta$ is the viewing direction’s angle to the macrosurface normal; and $alpha$ denotes the isotropic surface roughness.
-For anisotropic roughness, the amount of masking also depends on which direction around the surface you look from. The model computes an effective roughness using the viewing direction’s azimuth $phi$:
+here $theta$ is the viewing direction’s angle to the macrosurface normal; and $alpha$ denotes the isotropic surface roughness. For anisotropic roughness, the amount of masking also depends on which direction around the surface you look from. The model computes an effective roughness using the viewing direction’s azimuth $phi$:
 $ alpha = sqrt(alpha_x^2 cos^2 phi + alpha_y^2 sin^2 phi) $
 
 #figure(image("figures/anisotropic_vs_isotropic.png", width: 50%), caption: [Spheres rendered with (left) an anisotropic microfacet distribution and (right) an isotropic distribution])
@@ -146,7 +145,7 @@ This is an example of *importance sampling*.
 We want to sample the GGX Visible Normal Distribution Function (VNDF). We don't explicitly construct milions of tiny microfacets in our renderer. Instead, we use a statistical model to describe their distribution. Then VNDF is what we want to sample.
 
 Suppose we have an incoming direction $omega_o$, what is the probability that a ray encounters a microfacet with normal $omega_m$?
-That probability is described by the VNDF $D_omega(omega_m)$.
+That probability is described by the VNDF $D_omega (omega_m)$.
 So, when we sample the VNDF, we are effectively choosing a microfacet normal according to its probability of being visible to the incoming ray.
 #underline[We are not sampling a reflection direction directly]. We are sampling a microfacet normal, which we can subsequently use to calculate the reflected direction.
 ]
@@ -223,7 +222,7 @@ Finally, even if the microfacet receives light and reflects it towards us, the a
 $ F(omega_i, omega_m) $
 
 #memo(title: "The Torrance–Sparrow BRDF")[
-$ f_r(p,omega_o,omega_i) = (D(omega_m)F(omega_i, omega_m)G(omega_i, omega_o))/(4 |cos theta_i| |cos theta_o|) $
+$ f_r (p,omega_o,omega_i) = (D(omega_m)F(omega_i dot omega_m)G(omega_i, omega_o))/(4 cos theta_i cos theta_o) $
 ]
 
 #memo(title: "Torrance–Sparrow PDF")[

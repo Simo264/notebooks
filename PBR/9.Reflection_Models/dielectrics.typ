@@ -4,7 +4,7 @@
 A dielectric, such as glass or water, has two possible outcomes for a ray hitting its smooth surface: specular reflection and transmission.
 Therefore, the full scattering function is a BSDF which includes both BRDF and BTDF.
 
-#info[For a smooth dielectric, each component is a delta distribution: there is exactly one reflected direction and exactly one refracted direction, rather than a range of directions.]
+For a smooth dielectric, each component is a delta distribution: there is exactly one reflected direction and exactly one refracted direction, rather than a range of directions.
 
 An interface is *index-matched* when the IOR is the same on both sides: $eta=1$. In that case, there is no optical boundary; all light is transmitted and continues in the same direction.
 
@@ -53,34 +53,65 @@ This does not create or destroy energy. It accounts for the fact that the same p
 Total internal reflection occurs when light tries to leave a higher-IOR medium at too large an angle, such as glass to air. In that case, Snell’s law has no valid refracted solution. The Fresnel transmittance $T$ becomes zero at and beyond the critical angle. Therefore, the sampler should choose reflection with probability 1 and transmission with probability 0.
 
 == Rough Dielectric BSDF
-We will now extend the microfacet to the case of rough dielectrics. So it models rough glass, water, plastic, and similar translucent materials. The key difference from a rough conductor is that each microfacet uses Snell’s law, not just mirror reflection.
+We will now extend the microfacet to the case of rough dielectrics: rough glass, water, plastic, and similar translucent materials. 
 
-A rough dielectric has many microscopic interfaces with different normals. Therefore, reflection becomes a blurry lobe around the mirror direction, and transmission becomes a blurry lobe around the refracted direction. The rough dielectric BSDF describes both blurred lobes statistically
+A rough dielectric is made of tiny, smooth surfaces. Each tiny surface can either reflect light or refract it. The challenge is to determine which tiny surface interacts with the light, which event occurs, and how likely the resulting direction is.
 
+#notify[The microfacet itself is still assumed to be perfectly smooth. Its roughness comes from the fact that the surface is made of many microfacets with different orientations.]
 
+For reflection we use the half-vector:
+$ omega_m = "normalize"(omega_i+omega_o) $
 
-
-
-
-
-We first start with the density evaluation:
-- Evaluate sampling PDF of rough dielectric BSDF
-- compute generalized half vector $omega_m$
-- discard backfacing microfactes
-- determine Fresnel reflactance
-- compute probabilities density for sampling reflection and transmission
-
-We now turn to the generalized half-direction vector whose discussion requires a closer look at Snell’s law:
+For transmission, the incoming and outgoing directions are related by Snell's law instead:
 $ eta_o sin theta_o = eta_i sin theta_i #h(1cm) phi_o = phi_i + pi $
 
-Since the refraction takes place at the level of the microgeometry, all of these angles are to be understood within a coordinate frame aligned with the microfacet normal $omega_m$. A generalized half-direction vector:
-$ omega_m = (eta_i omega_i + eta_o omega_o)/(| eta_i omega_i + eta_o omega_o |) = (eta omega_i + eta_o omega_o)/(|eta omega_i + eta_o omega_o|) $
+Unlike reflection, the two directions $omega_i, omega_o$ are not symmetric: the refractive indices affect their relationship. The generalized half-vector accounts for this:
+$ omega_m = (eta_i omega_i + eta_o omega_o)/(|| eta_i omega_i + eta_o omega_o ||) = (eta omega_i + eta_o omega_o)/(||eta omega_i + eta_o omega_o||) $
 
-$omega_m$ always points toward the denser medium, whereas pbrt uses the convention that micro and macro normal are consistently oriented, $omega_m dot n > 0$. In practice, we therefore compute the following modified half-direction vector, where $n = (0,0,1)$ in local coordinates:
+We can interpret this as: _given an incoming and an outgoing direction, this vector tells us which microfacet orientation could have produced the transmission between them_.
+
+This half-vector has a particular orientation: it points toward the denser medium. However, we want all microfacet normals to follow a consistent orientation relative to the macroscopic surface normal. In local coordinates, the macroscopic normal is $n=(0,0,1)$, therefore $omega_m dot n > 0$
+
+The microfacet distribution $D$, the masking-shadowing function $G$ and the sampling routines all rely on a consistent normal orientation:
 $ omega_m = "sign"(omega_m dot n > 0)omega_m $
 
-Next, microfacets that are backfacing with respect to either the incident or outgoing direction do not contribute and must be discarded.
-Given $omega_m$ we can evaluate the Fresnel reflection and transmission terms using the specialized dielectric evaluation of the Fresnel equations.
+For example, if $omega_m dot n > 0$ we keep it, otherwise if $omega_m dot n < 0$ we reverse it.
 
-We now have the values necessary to compute the PDF for $omega_i$ which depends on whether it reflects or transmits at the surface.
-$ p(omega_i) = D_omega_o (omega_m) = (d omega_m)/(d omega_i) = (D_omega_o (omega_m)|omega_o dot omega_m|)/((omega_i dot omega_m) + ((omega_o dot omega_m)/eta))^2 $
+After reconstructing $omega_m$, the renderer checks whether the microfacet is consistent with both directions. For reflection, both directions are on the same side of the interface, so both must face the microfacet:
+$ omega_i dot omega_m > 0 #h(1cm) omega_o dot omega_m > 0 $
+
+For transmission, the directions are on opposite sides of the interface. This rejects microfacets that could not physically connect the two given directions.
+
+Once we have a valid microfacet normal, we can calculate the Fresnel reflectance. Fresnel tells us how much light is reflected and how much is transmitted at a smooth dielectric interface:
+$ P("reflection")=F #h(1cm) P("transmission")=1-F $
+There is also an important exception: total internal reflection. In that case: $F=1$.
+
+Finally we must calculate the PDF. Remember that VNDF sampling does not directly generate an incoming direction $omega_i$, instead it generates a microfacet normal: 
+$ omega_m &approx D_omega_o (omega_m) \ 
+p(omega_m) &= D_omega_o (omega_m)
+$
+We need the probability of sampling the direction $omega_i$ and not the normal $omega_m$. 
+
+#question(title: "How do we calculate the PDF?")[
+For reflection:
+$ p_("reflection")(omega_i) = D_omega_o (omega_m) 1 / (4 |omega_o dot omega_m|) R/(R+T) $
+
+For transmission:
+$ p_("transmit")(omega_i) = D_omega_o (omega_m) (|omega_i dot omega_m|)/((omega_i dot omega_m) + ((omega_o dot omega_m)/eta))^2 T/(R+T) $
+] 
+
+BSDF evaluation is similarly split into reflective and transmissive components.
+#info(title: "Rough Dielectric BSDF")[
+The reflection component (BRDF) follows the approach used for conductors:
+$ f_r (p, omega_o, omega_i) = (D(omega_m) F(omega_o dot omega_m)G(omega_i, omega_o))/(4 cos theta_i cos theta_o) $
+  
+The BTDF:
+$ f_t (p, omega_o, omega_i) = (D(omega_m) (1-F(omega_o dot omega_m))G(omega_i, omega_o)) / ((omega_i dot omega_m) + ((omega_o dot omega_m)/eta))^2 (|omega_i dot omega_m| |omega_o dot omega_m|) / (|cos theta_i| |cos theta_o|) $
+]
+
+Sampling proceeds by drawing a microfacet normal from the visible normal distribution VNDF, computing the Fresnel term, and stochastically selecting between reflection and transmission.
+
+Handling of the reflection component is straightforward and mostly matches the case for conductors except for extra factors that arise due to the discrete choice between reflection and transmission components.
+
+The transmission case invokes refract() to determine $omega_i$
+
